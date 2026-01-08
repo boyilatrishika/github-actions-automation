@@ -1,0 +1,72 @@
+# Google Cloud service account key
+gcp-key.json
+
+# JSON files (to prevent accidental commits of API keys)
+*.json
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Secrets files
+secrets.txt
+secrets.json
+.secrets
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+PIPFILE.lock
+.venv
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+*.log
+
+# CI/CD
+.github/workflows/*.log
+.github/workflows/*.tmp
