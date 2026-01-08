@@ -9,22 +9,21 @@ on:
 jobs:
   send-reminder:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Check current time in Asia/Kolkata timezone
+      - name: Check current time in Asia/Kolkata timezone (schedule only)
         id: timezone-check
+        if: github.event_name == 'schedule'
         run: |
-          # Get current time in Asia/Kolkata timezone
           CURRENT_TIME=$(TZ='Asia/Kolkata' date '+%H:%M:%S')
           CURRENT_HOUR=$(TZ='Asia/Kolkata' date '+%H')
-          
+
           echo "Current time in IST: $CURRENT_TIME"
           echo "Current hour: $CURRENT_HOUR"
-          
-          # Check if current hour is 08 (8 AM)
+
           if [ "$CURRENT_HOUR" = "08" ]; then
             echo "Time check passed: Current hour is 08:XX IST"
             echo "should_send=true" >> $GITHUB_OUTPUT
@@ -38,18 +37,22 @@ jobs:
           echo "=== Timezone Information ==="
           echo "Current UTC time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
           echo "Current IST time: $(TZ='Asia/Kolkata' date '+%Y-%m-%d %H:%M:%S IST')"
+          echo "Event: ${{ github.event_name }}"
           echo "Scheduled cron: 30 2 * * * (2:30 AM UTC)"
-          echo "Expected trigger time: 8:00 AM IST"
-          echo ""
+          echo "Expected trigger time (IST): 08:00"
 
       - name: Send Telegram reminder message
-        if: steps.timezone-check.outputs.should_send == 'true'
+        # Scheduled: only if 08:XX IST
+        # Manual: always
+        if: |
+          (github.event_name == 'schedule' && steps.timezone-check.outputs.should_send == 'true') ||
+          (github.event_name == 'workflow_dispatch')
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          echo "Sending Telegram reminder message..."
-          
+          echo "Sending Telegram reminder message (event: ${{ github.event_name }})..."
+
           curl -X POST \
             "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -H "Content-Type: application/json" \
@@ -58,12 +61,12 @@ jobs:
               \"text\": \"☀️ Good morning! Time to start your day!\",
               \"parse_mode\": \"HTML\"
             }"
-          
-          echo ""
-          echo "Message sent successfully!"
 
-      - name: Skip message (wrong hour)
-        if: steps.timezone-check.outputs.should_send == 'false'
+          echo ""
+          echo "Message sent successfully."
+
+      - name: Skip message (wrong hour for schedule)
+        if: github.event_name == 'schedule' && steps.timezone-check.outputs.should_send == 'false'
         run: |
           echo "⏭️  Skipping message send - not at 8 AM IST yet"
           CURRENT_HOUR=$(TZ='Asia/Kolkata' date '+%H')
