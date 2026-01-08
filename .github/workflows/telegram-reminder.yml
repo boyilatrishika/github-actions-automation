@@ -52,18 +52,26 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           echo "Sending Telegram reminder message (event: ${{ github.event_name }})..."
+          echo "Chat ID: ${TELEGRAM_CHAT_ID}"
 
-          curl -X POST \
+          RESPONSE=$(curl -sS -X POST \
             "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -H "Content-Type: application/json" \
             -d "{
               \"chat_id\": \"${TELEGRAM_CHAT_ID}\",
               \"text\": \"☀️ Good morning! Time to start your day!\",
               \"parse_mode\": \"HTML\"
-            }"
+            }")
 
-          echo ""
-          echo "Message sent successfully."
+          echo "Telegram API response:"
+          echo "$RESPONSE"
+
+          if echo "$RESPONSE" | grep -q '"ok":false'; then
+            echo "Telegram reported an error."
+            exit 1
+          fi
+
+          echo "Message step completed."
 
       - name: Skip message (wrong hour for schedule)
         if: github.event_name == 'schedule' && steps.timezone-check.outputs.should_send == 'false'
