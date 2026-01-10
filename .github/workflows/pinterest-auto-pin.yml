@@ -1,0 +1,89 @@
+name: Auto-Generate and Post to Pinterest
+
+on:
+  schedule:
+    - cron: '0 9 * * *'  # Daily at 9 AM UTC
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  pinterest-auto-pin:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests pillow
+      
+      - name: Generate AI Image using free API
+        run: |
+          python3 << 'EOF'
+          import requests
+          import json
+          from datetime import datetime
+          
+          # Using Pixabay API for free images (alternative to paid generators)
+          api_key = "${{ secrets.PIXABAY_API_KEY }}"
+          search_query = "AI technology innovation"
+          
+          # Fetch image from Pixabay
+          url = f"https://pixabay.com/api/?key={api_key}&q={search_query}&image_type=illustration"
+          response = requests.get(url)
+          
+          if response.status_code == 200:
+              data = response.json()
+              if data['hits']:
+                  image_url = data['hits'][0]['largeImageURL']
+                  img_response = requests.get(image_url)
+                  with open('pin_image.jpg', 'wb') as f:
+                      f.write(img_response.content)
+                  print(f"Image downloaded: {image_url}")
+              else:
+                  print("No images found")
+          EOF
+      
+      - name: Post to Pinterest
+        run: |
+          python3 << 'EOF'
+          import requests
+          import json
+          from datetime import datetime
+          
+          access_token = "${{ secrets.PINTEREST_ACCESS_TOKEN }}"
+          board_id = "${{ secrets.PINTEREST_BOARD_ID }}"
+          
+          # Pinterest API v5 endpoint
+          url = "https://api.pinterest.com/v5/pins"
+          
+          headers = {
+              "Authorization": f"Bearer {access_token}",
+              "Content-Type": "application/json"
+          }
+          
+          pin_data = {
+              "title": f"AI Innovation Daily Pin - {datetime.now().strftime('%Y-%m-%d')}",
+              "description": "Explore cutting-edge AI tools and automation technologies. Daily insights on artificial intelligence and digital transformation. #AI #Automation #Technology #Innovation",
+              "board_id": board_id,
+              "media_source": {
+                  "source_type": "image_url",
+                  "url": "https://pixabay.com/api/?key=${{ secrets.PIXABAY_API_KEY }}&q=AI+technology&image_type=illustration"
+              },
+              "link": "https://example.com"
+          }
+          
+          response = requests.post(url, headers=headers, json=pin_data)
+          
+          if response.status_code in [200, 201]:
+              print("✅ Pin posted successfully to Pinterest!")
+              print(json.dumps(response.json(), indent=2))
+          else:
+              print(f"❌ Error: {response.status_code}")
+              print(response.text)
+          EOF
