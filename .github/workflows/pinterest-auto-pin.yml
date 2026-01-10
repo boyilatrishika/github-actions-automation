@@ -8,7 +8,7 @@ on:
         type: boolean
         default: false
         required: false
-        description: 'Run in test mode (no actual pin created)'
+        description: 'Run in test mode (no actual pin created)')'
   pinterest-auto-pin:
     runs-on: ubuntu-latest
     steps:
