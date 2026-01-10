@@ -96,7 +96,7 @@ jobs:
                   # Post to Pinterest
                   response = requests.post(api_url, headers=headers, json=payload)
                   
-                              print(f"API Status Code: {response.status_code}")
+                                                      print(f"API Status Code: {response.status_code}")
                   
                   if response.status_code in [200, 201]:
                       print("✅ PIN CREATED SUCCESSFULLY!")
