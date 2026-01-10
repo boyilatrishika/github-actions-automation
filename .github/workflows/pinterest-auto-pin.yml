@@ -88,9 +88,11 @@ jobs:
                       "description": description,
                       "link": link,
                       "board_id": board_id,
-                      "image_url": "https://raw.githubusercontent.com/boyilatrishika/github-actions-automation/main/pin_image.png"
-                  }
-                  
+            "media_source": {
+                "source_type": "image_url",
+                "url": image_url
+                        }
+        }
                   # Post to Pinterest
                   response = requests.post(api_url, headers=headers, json=payload)
                   
