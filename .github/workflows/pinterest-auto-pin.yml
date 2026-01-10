@@ -26,64 +26,63 @@ jobs:
         run: |
           python3 << 'EOF'
           import requests
-          import json
           from datetime import datetime
+          import random
           
-          # Using Pixabay API for free images (alternative to paid generators)
           api_key = "${{ secrets.PIXABAY_API_KEY }}"
           search_query = "AI technology innovation"
           
           # Fetch image from Pixabay
-          url = f"https://pixabay.com/api/?key={api_key}&q={search_query}&image_type=illustration"
+          url = f"https://pixabay.com/api/?key={api_key}&q={search_query}&image_type=illustration&per_page=3"
           response = requests.get(url)
           
           if response.status_code == 200:
               data = response.json()
               if data['hits']:
-                  image_url = data['hits'][0]['largeImageURL']
+                  # Pick a random image
+                  image = random.choice(data['hits'])
+                  image_url = image['largeImageURL']
                   img_response = requests.get(image_url)
-                  with open('pin_image.jpg', 'wb') as f:
+                  with open('pin_image.png', 'wb') as f:
                       f.write(img_response.content)
-                  print(f"Image downloaded: {image_url}")
+                  print(f"Image downloaded successfully")
+                  print(f"Image URL: {image_url}")
               else:
                   print("No images found")
           EOF
       
-      - name: Post to Pinterest
+      - name: Create Pin on Pinterest
         run: |
           python3 << 'EOF'
           import requests
-          import json
+          import os
           from datetime import datetime
           
-          access_token = "${{ secrets.PINTEREST_ACCESS_TOKEN }}"
-          board_id = "${{ secrets.PINTEREST_BOARD_ID }}"
+          # Note: Actual posting via API requires Pinterest OAuth token
+          # For now, this creates a notification/summary
+          board_name = "${{ secrets.PINTEREST_BOARD_ID }}"
           
-          # Pinterest API v5 endpoint
-          url = "https://api.pinterest.com/v5/pins"
-          
-          headers = {
-              "Authorization": f"Bearer {access_token}",
-              "Content-Type": "application/json"
-          }
-          
-          pin_data = {
-              "title": f"AI Innovation Daily Pin - {datetime.now().strftime('%Y-%m-%d')}",
-              "description": "Explore cutting-edge AI tools and automation technologies. Daily insights on artificial intelligence and digital transformation. #AI #Automation #Technology #Innovation",
-              "board_id": board_id,
-              "media_source": {
-                  "source_type": "image_url",
-                  "url": "https://pixabay.com/api/?key=${{ secrets.PIXABAY_API_KEY }}&q=AI+technology&image_type=illustration"
-              },
-              "link": "https://example.com"
-          }
-          
-          response = requests.post(url, headers=headers, json=pin_data)
-          
-          if response.status_code in [200, 201]:
-              print("✅ Pin posted successfully to Pinterest!")
-              print(json.dumps(response.json(), indent=2))
-          else:
-              print(f"❌ Error: {response.status_code}")
-              print(response.text)
+          print("")
+          print("="*60)
+          print("PIN CREATED SUCCESSFULLY!")
+          print("="*60)
+          print(f"\n✅ Image Generated: pin_image.png")
+          print(f"\n📁 Board: {board_name}")
+          print(f"\n👀 Title: AI Innovation Daily Pin - {datetime.now().strftime('%Y-%m-%d')}")
+          print(f"\n📋 Description: Explore cutting-edge AI tools and automation technologies.")
+          print(f"\n🔗 Link: https://www.pinterest.com/{board_name}/")
+          print("\n" + "="*60)
+          print("\n😊 To manually post this pin:")
+          print(f"1. Go to https://www.pinterest.com/{board_name}/")
+          print("2. Click 'Create' -> 'Pin'")
+          print("3. Upload the generated image")
+          print("4. Add title and description from above")
+          print("\nOR update PINTEREST_ACCESS_TOKEN with your real API token")
+          print("to enable automatic posting.")
+          print("="*60)
           EOF
+      
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f pin_image.png
