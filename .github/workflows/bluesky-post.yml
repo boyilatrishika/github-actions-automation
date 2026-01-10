@@ -1,0 +1,31 @@
+name: Post to Bluesky
+
+on:
+  schedule:
+    # Run daily at 9:00 AM UTC
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+    inputs:
+      post_content:
+        description: 'Post content to share on Bluesky'
+        required: true
+        default: 'Automated post from GitHub Actions!'
+
+jobs:
+  post-to-bluesky:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Post to Bluesky
+        uses: zentered/bluesky-post-action@v1
+        with:
+          post: ${{ github.event.inputs.post_content || 'Daily automated post from GitHub Actions! Check out my automation workflows.' }}
+        env:
+          BSKY_IDENTIFIER: ${{ secrets.BSKY_IDENTIFIER }}
+          BSKY_PASSWORD: ${{ secrets.BSKY_PASSWORD }}
+
+      - name: Log Success
+        if: success()
+        run: echo 'Successfully posted to Bluesky!'
