@@ -1,4 +1,4 @@
-name: Pinterest Auto Post Test
+name: Pinterest Auto Post
 on:
   workflow_dispatch:
 jobs:
@@ -11,5 +11,75 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-      - name: Test Pinterest Connection
-        run: echo "Testing Pinterest connection with secrets"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests pillow
+      - name: Get AI image and post to Pinterest
+        env:
+          PINTEREST_ACCESS_TOKEN: ${{ secrets.PINTEREST_ACCESS_TOKEN }}
+          PINTEREST_BOARD_ID: ${{ secrets.PINTEREST_BOARD_ID }}
+          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+        run: |
+          python3 << 'EOF'
+          import requests
+          import base64
+          import json
+          from datetime import datetime
+          
+          # Get access token and board ID
+          access_token = "$PINTEREST_ACCESS_TOKEN"
+          board_id = "$PINTEREST_BOARD_ID"
+          pixabay_key = "$PIXABAY_API_KEY"
+          
+          # Step 1: Fetch image from Pixabay
+          pixabay_url = f"https://pixabay.com/api/?key={pixabay_key}&q=AI+technology&image_type=illustration&per_page=1"
+          response = requests.get(pixabay_url)
+          
+          if response.status_code == 200:
+              data = response.json()
+              if data['hits']:
+                  image_url = data['hits'][0]['largeImageURL']
+                  print(f"✓ Image found: {image_url}")
+                  
+                  # Step 2: Download and encode image as base64
+                  img_response = requests.get(image_url)
+                  image_data = base64.b64encode(img_response.content).decode('utf-8')
+                  print("✓ Image encoded to base64")
+                  
+                  # Step 3: Create pin using Pinterest v5 API
+                  pin_data = {
+                      "board_id": board_id,
+                      "title": f"AI Innovation Daily Pin - {datetime.now().strftime('%Y-%m-%d')}",
+                      "description": "Automated pin created via GitHub Actions using Pinterest v5 API",
+                      "media_source": {
+                          "source_type": "image_base64",
+                          "content_type": "image/jpeg",
+                          "data": image_data
+                      }
+                  }
+                  
+                  headers = {
+                      "Authorization": f"Bearer {access_token}",
+                      "Content-Type": "application/json"
+                  }
+                  
+                  pin_response = requests.post(
+                      "https://api.pinterest.com/v5/pins",
+                      json=pin_data,
+                      headers=headers
+                  )
+                  
+                  if pin_response.status_code == 201:
+                      pin_json = pin_response.json()
+                      print(f"✓ Pin created successfully!")
+                      print(f"  Pin ID: {pin_json.get('id')}")
+                      print(f"  URL: https://pinterest.com/pin/{pin_json.get('id')}")
+                  else:
+                      print(f"✗ Failed to create pin: {pin_response.status_code}")
+                      print(f"  Response: {pin_response.text}")
+              else:
+                  print("✗ No images found on Pixabay")
+          else:
+              print(f"✗ Pixabay API error: {response.status_code}")
+          EOF
