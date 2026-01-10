@@ -20,15 +20,13 @@ jobs:
           echo "Event: ${{ github.event_name }}"
           echo "Scheduled cron: 30 2 * * * (2:30 AM UTC = 8:00 AM IST)"
 
-      - name: Send Telegram reminder message
-        # Scheduled: always send (cron is correctly timed)
-        # Manual: always send
+      - name: Send Telegram reminder to personal chat
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          echo "Sending Telegram reminder message (event: ${{ github.event_name }})..."
+          echo "Sending Telegram reminder to personal chat..."
           echo "Chat ID: ${TELEGRAM_CHAT_ID}"
           RESPONSE=$(curl -sS -X POST \
             "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
@@ -44,4 +42,28 @@ jobs:
             echo "Telegram reported an error."
             exit 1
           fi
-          echo "Message step completed."
+          echo "Message to personal chat completed."
+
+      - name: Send Telegram reminder to group
+        if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && secrets.TELEGRAM_GROUP_CHAT_ID != ''
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_GROUP_CHAT_ID: ${{ secrets.TELEGRAM_GROUP_CHAT_ID }}
+        run: |
+          echo "Sending Telegram reminder to group..."
+          echo "Group Chat ID: ${TELEGRAM_GROUP_CHAT_ID}"
+          RESPONSE=$(curl -sS -X POST \
+            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"chat_id\": \"${TELEGRAM_GROUP_CHAT_ID}\",
+              \"text\": \"☀️ Good morning! Time to start your day!\",
+              \"parse_mode\": \"HTML\"
+            }")
+          echo "Telegram API response:"
+          echo "$RESPONSE"
+          if echo "$RESPONSE" | grep -q '\"ok\":false'; then
+            echo "Telegram reported an error."
+            exit 1
+          fi
+          echo "Message to group completed."
