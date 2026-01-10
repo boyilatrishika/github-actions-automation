@@ -25,7 +25,7 @@ jobs:
 
       - name: Post to Bluesky
         env:
-          BSKY_USERNAME: ${{ secrets.BSKY_USERNAME }}
+          BSKY_IDENTIFIER: ${{ secrets.BSKY_IDENTIFIER }}
           BSKY_PASSWORD: ${{ secrets.BSKY_PASSWORD }}
           POST_CONTENT: ${{ github.event.inputs.post_content || 'Automated post from GitHub Actions! Check it out!' }}
         run: |
@@ -34,7 +34,7 @@ jobs:
           AUTH_RESPONSE=$(curl -s -X POST https://bsky.social/xrpc/com.atproto.server.createSession \
             -H "Content-Type: application/json" \
             -d "{
-              \"identifier\": \"${BSKY_USERNAME}\",
+              \"identifier\": \"${BSKY_IDENTIFIER}\",
               \"password\": \"${BSKY_PASSWORD}\"
             }")
           
