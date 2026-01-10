@@ -18,14 +18,68 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
       - name: Post to Bluesky
-        uses: zentered/bluesky-post-action@v1
-        with:
-          post: ${{ github.event.inputs.post_content || 'Daily automated post from GitHub Actions! Check out my automation workflows.' }}
         env:
-          BSKY_IDENTIFIER: ${{ secrets.BSKY_IDENTIFIER }}
+          BSKY_USERNAME: ${{ secrets.BSKY_USERNAME }}
           BSKY_PASSWORD: ${{ secrets.BSKY_PASSWORD }}
+          POST_CONTENT: ${{ github.event.inputs.post_content || 'Automated post from GitHub Actions! Check it out!' }}
+        run: |
+          # Authenticate with Bluesky
+          echo "Authenticating with Bluesky..."
+          AUTH_RESPONSE=$(curl -s -X POST https://bsky.social/xrpc/com.atproto.server.createSession \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"identifier\": \"${BSKY_USERNAME}\",
+              \"password\": \"${BSKY_PASSWORD}\"
+            }")
+          
+          ACCESS_TOKEN=$(echo "$AUTH_RESPONSE" | jq -r '.accessJwt')
+          DID=$(echo "$AUTH_RESPONSE" | jq -r '.did')
+          
+          if [ "$ACCESS_TOKEN" = "null" ] || [ -z "$ACCESS_TOKEN" ]; then
+            echo "Authentication failed!"
+            echo "Response: $AUTH_RESPONSE"
+            exit 1
+          fi
+          
+          echo "Authentication successful"
+          echo "DID: $DID"
+          
+          # Create the post
+          echo "Creating post on Bluesky: $POST_CONTENT"
+          
+          POST_RESPONSE=$(curl -s -X POST https://bsky.social/xrpc/com.atproto.repo.createRecord \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -d "{
+              \"repo\": \"${DID}\",
+              \"collection\": \"app.bsky.feed.post\",
+              \"record\": {
+                \"text\": \"${POST_CONTENT}\",
+                \"createdAt\": \"$(date -u +'%Y-%m-%dT%H:%M:%S.000Z')\"
+              }
+            }")
+          
+          echo "Post response: $POST_RESPONSE"
+          
+          POST_URI=$(echo "$POST_RESPONSE" | jq -r '.uri')
+          POST_CID=$(echo "$POST_RESPONSE" | jq -r '.cid')
+          
+          if [ "$POST_URI" = "null" ] || [ -z "$POST_URI" ]; then
+            echo "Failed to post to Bluesky!"
+            echo "Full response: $POST_RESPONSE"
+            exit 1
+          fi
+          
+          echo "Successfully posted to Bluesky!"
+          echo "Post URI: $POST_URI"
+          echo "Post CID: $POST_CID"
 
       - name: Log Success
         if: success()
-        run: echo 'Successfully posted to Bluesky!'
+        run: echo "Bluesky post created successfully!"
