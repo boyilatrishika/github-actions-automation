@@ -9,7 +9,8 @@ on:
         default: false
         required: false
         description: 'Run in test mode (no actual pin created)')'
-  pinterest-auto-pin:
+        jobs:
+    pinterest-auto-pin:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
