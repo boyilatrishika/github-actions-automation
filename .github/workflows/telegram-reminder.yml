@@ -45,11 +45,16 @@ jobs:
           echo "Message to personal chat completed."
 
       - name: Send Telegram reminder to group
-        if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && secrets.TELEGRAM_GROUP_CHAT_ID != ''
+        # This will run for scheduled and manual triggers. Will fail gracefully if secret not set.
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_GROUP_CHAT_ID: ${{ secrets.TELEGRAM_GROUP_CHAT_ID }}
         run: |
+          if [ -z "${TELEGRAM_GROUP_CHAT_ID}" ]; then
+            echo "TELEGRAM_GROUP_CHAT_ID not configured. Skipping group message."
+            exit 0
+          fi
           echo "Sending Telegram reminder to group..."
           echo "Group Chat ID: ${TELEGRAM_GROUP_CHAT_ID}"
           RESPONSE=$(curl -sS -X POST \
