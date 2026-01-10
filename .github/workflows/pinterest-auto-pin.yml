@@ -1,10 +1,8 @@
 name: Auto-Generate and Post to Pinterest
-
 on:
   schedule:
-    - cron: '0 9 * * *'  # Daily at 9 AM UTC
-  workflow_dispatch:  # Manual trigger
-
+    - cron: '0 9 * * *' # Daily at 9 AM UTC
+  workflow_dispatch: # Manual trigger
 jobs:
   pinterest-auto-pin:
     runs-on: ubuntu-latest
@@ -55,31 +53,62 @@ jobs:
         run: |
           python3 << 'EOF'
           import requests
+          import json
           import os
           from datetime import datetime
           
-          # Note: Actual posting via API requires Pinterest OAuth token
-          # For now, this creates a notification/summary
-          board_name = "${{ secrets.PINTEREST_BOARD_ID }}"
+          # Pinterest API Configuration
+          access_token = "${{ secrets.PINTEREST_ACCESS_TOKEN }}"
+          board_id = "${{ secrets.PINTEREST_BOARD_ID }}"
           
-          print("")
-          print("="*60)
-          print("PIN CREATED SUCCESSFULLY!")
-          print("="*60)
-          print(f"\n✅ Image Generated: pin_image.png")
-          print(f"\n📁 Board: {board_name}")
-          print(f"\n👀 Title: AI Innovation Daily Pin - {datetime.now().strftime('%Y-%m-%d')}")
-          print(f"\n📋 Description: Explore cutting-edge AI tools and automation technologies.")
-          print(f"\n🔗 Link: https://www.pinterest.com/{board_name}/")
-          print("\n" + "="*60)
-          print("\n😊 To manually post this pin:")
-          print(f"1. Go to https://www.pinterest.com/{board_name}/")
-          print("2. Click 'Create' -> 'Pin'")
-          print("3. Upload the generated image")
-          print("4. Add title and description from above")
-          print("\nOR update PINTEREST_ACCESS_TOKEN with your real API token")
-          print("to enable automatic posting.")
-          print("="*60)
+          # Pin details
+          title = f"AI Innovation Daily Pin - {datetime.now().strftime('%Y-%m-%d')}"
+          description = "Explore cutting-edge AI tools and automation technologies."
+          link = "https://www.example.com"
+          image_path = "pin_image.png"
+          
+          if not access_token or access_token == "":
+              print("❌ PINTEREST_ACCESS_TOKEN not configured!")
+              print("\nTo enable automatic posting:")
+              print("1. Get your Pinterest access token from: https://developers.pinterest.com/")
+              print("2. Add it as PINTEREST_ACCESS_TOKEN secret in GitHub")
+              print("3. Re-run the workflow")
+          else:
+              try:
+                  # Prepare the API request
+                  api_url = f"https://api.pinterest.com/v5/pins"
+                  
+                  headers = {
+                      "Authorization": f"Bearer {access_token}",
+                      "Content-Type": "application/json"
+                  }
+                  
+                  payload = {
+                      "title": title,
+                      "description": description,
+                      "link": link,
+                      "board_id": board_id,
+                      "image_url": "https://raw.githubusercontent.com/boyilatrishika/github-actions-automation/main/pin_image.png"
+                  }
+                  
+                  # Post to Pinterest
+                  response = requests.post(api_url, headers=headers, json=payload)
+                  
+                  print(f"API Status Code: {response.status_code}")
+                  
+                  if response.status_code in [200, 201]:
+                      print("✅ PIN CREATED SUCCESSFULLY!")
+                      print(f"Title: {title}")
+                      print(f"Description: {description}")
+                      result = response.json()
+                      if 'id' in result:
+                          print(f"Pin ID: {result['id']}")
+                  else:
+                      print(f"❌ Failed to create pin")
+                      print(f"Response: {response.text}")
+                  
+              except Exception as e:
+                  print(f"❌ Error: {str(e)}")
           EOF
       
       - name: Cleanup
